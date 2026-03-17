@@ -3,13 +3,13 @@ CFLAGS=-g
 main : main.o nn.o nn_b.o
 	g++ $(CFLAGS) -o $@ $^ -lnlopt
 
-%.o : %.c
+%.o : %.c const.h
 	gcc $(CFLAGS) -c $<
 
-%.o : %.cpp
+%.o : %.cpp const.h
 	g++ $(CFLAGS) -c $<
 
-%_b.c : %.c
+%_b.c : %.c const.h
 	tapenade -root 'NeuralNetworkLoss()/(weights)' -b $<
 	sed -e '/adStack/s|^|//|' -i $@
 
