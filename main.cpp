@@ -4,18 +4,20 @@
 #include <assert.h>
 #include <vector>
 #include <endian.h>
+#include <nlopt.h>
 
 extern "C" {
-    double NeuralNetwork(double image[N], double weights[NW], double label[O]);
-    void NeuralNetwork_b(double image[N], double weights[NW], double weightsb[NW],
+    double NeuralNetwork(double image[N], const double weights[NW], double label[O]);
+    void NeuralNetwork_b(double image[N], const double weights[NW], double weightsb[NW],
         double label[O], double NeuralNetworkb);
 }
 
+size_t len=0;
+std::vector<double> images;
+std::vector<double> labels;
+
 int main() {
     srand(10);
-    size_t len=0;
-    std::vector<double> images;
-    std::vector<double> labels;
     {
         FILE* f = fopen("data/train-images.idx3-ubyte","rb");
         assert(f != NULL);
@@ -59,11 +61,28 @@ int main() {
     std::vector<double> weightsb;
     weightsb.resize(NW);
 
-    double loss = 0;
-    for (size_t i=0; i<len; i++) loss += NeuralNetwork(&images[N*i], weights.data(), &labels[O*i]);
-    printf("loss: %lg\n", loss);
-    for(size_t i=0; i<weightsb.size(); i++) weightsb[i] = 0;
-    for(size_t i=0; i<len; i++) NeuralNetwork_b(&images[N*i], weights.data(), weightsb.data(), &labels[O*i], 1.0);
-    for(size_t i=0; i<weightsb.size(); i++) printf("grad[%d]: %lg\n", (int) i, weightsb[i]);
+
+
+
+    nlopt_opt opt = nlopt_create(NLOPT_LD_LBFGS, NW);
+    nlopt_result opt_res;
+    opt_res = nlopt_set_min_objective(
+        opt,
+        [](unsigned n, const double* x, double* grad, void* f_data) -> double {
+            double loss = 0;
+            double w = 1.0/len;
+            for (size_t i=0; i<len; i++) loss += NeuralNetwork(&images[N*i], x, &labels[O*i]);
+            loss = loss * w;
+            printf("loss: %lg\n", loss);
+            for(size_t i=0; i<NW; i++) grad[i] = 0;
+            for(size_t i=0; i<len; i++) NeuralNetwork_b(&images[N*i], x, grad, &labels[O*i], w);
+            return loss;
+        },
+        NULL
+    );
+    opt_res = nlopt_set_maxeval(opt, 200);
+    double obj;
+    opt_res = nlopt_optimize(opt, weights.data(), &obj);
+    printf("obj: %lg", obj);
     return 0;
 }

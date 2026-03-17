@@ -1,7 +1,7 @@
 CFLAGS=-g
 
 main : main.o nn.o nn_b.o
-	g++ $(CFLAGS) -o $@ $^
+	g++ $(CFLAGS) -o $@ $^ -lnlopt
 
 %.o : %.c
 	gcc $(CFLAGS) -c $<
