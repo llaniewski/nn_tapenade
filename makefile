@@ -10,7 +10,7 @@ main : main.o nn.o nn_b.o
 	g++ $(CFLAGS) -c $<
 
 %_b.c : %.c
-	tapenade -root 'NeuralNetwork()/(weights)' -b $<
+	tapenade -root 'NeuralNetworkLoss()/(weights)' -b $<
 	sed -e '/adStack/s|^|//|' -i $@
 
 .PRECIOUS: %_b.c
