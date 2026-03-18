@@ -108,8 +108,8 @@ std::mt19937 rnd(rd());
 
 int main() {
     srand(10);
-    train.read("data/train");
-    test.read("data/t10k");
+    train.read("data/fashion/train");
+    test.read("data/fashion/t10k");
 
     std::vector<double> weights;
     weights.resize(NW);
@@ -123,7 +123,7 @@ int main() {
         opt,
         [](unsigned n, const double* x, double* grad, void* f_data) -> double {
             std::shuffle(train.idx.begin(), train.idx.end(), rnd);
-            size_t len = 10000;
+            size_t len = train.len;
             printf("train: ");
             double loss = train.avg_loss(x,len);
             printf("test:  ");
