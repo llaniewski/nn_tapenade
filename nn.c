@@ -60,6 +60,7 @@ double NeuralNetworkLoss(double image[N], double weights[NW], double label[O]) {
     double loss = 0;
     for (int i=0;i<O;i++) {
         loss += (layer3[i]-label[i])*(layer3[i]-label[i]);
+        // loss += -label[i]*log(layer3[i]);
     }
     return loss;
 }

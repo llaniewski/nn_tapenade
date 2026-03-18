@@ -6,6 +6,8 @@
 #include <string>
 #include <endian.h>
 #include <nlopt.h>
+#include <algorithm>
+#include <random>
 
 extern "C" {
     double NeuralNetwork(double image[N], const double weights[NW], double layer3[O]);
@@ -19,6 +21,7 @@ struct image_set {
     std::vector<double> images;
     std::vector<int> labels;
     std::vector<double> label_dists;
+    std::vector<size_t> idx;
     void read(std::string name) {
         {
             FILE* f = fopen((name+"-images.idx3-ubyte").c_str(),"rb");
@@ -59,40 +62,49 @@ struct image_set {
             }
             fclose(f);
         }
+        idx.resize(len);
+        for(size_t i = 0; i<len; i++) idx[i] = i;
     }
-    double avg_loss(const double* weights) {
+    double avg_loss(const double* weights, int len0) {
         double loss = 0;
         double hit = 0;
-        for (size_t i=0; i<len; i++) {
+        for (size_t i=0; i<len0; i++) {
             double output[O];
-            NeuralNetwork(&images[N*i], weights, output);
-            int label = labels[i];
+            size_t k = idx[i];
+            NeuralNetwork(&images[N*k], weights, output);
+            int label = labels[k];
             int imax = 0;
             double loss0 = 0;
             for (int j=0; j<O; j++) {
                 if (output[j] > output[imax]) imax = j;
-                double dist_val = label_dists[O*i + j];
+                double dist_val = label_dists[O*k + j];
                 dist_val = dist_val - output[j];
                 loss0 += dist_val*dist_val;
+                // loss0 += -dist_val[i]*log(output[i]);
             }
             if (imax == label) hit++;
             loss += loss0;
             // loss += NeuralNetworkLoss(&images[N*i], weights, &label_dists[O*i]);
         }
-        loss = loss / len;
-        hit = hit / len;
+        loss = loss / len0;
+        hit = hit / len0;
         printf("loss: %10lg, hits: %.0lf%%\n", loss, hit*100);
         return loss;
     }
-    void avg_loss_grad(const double* weights, double* weightsb) {
-        double w = 1.0/len;
+    void avg_loss_grad(const double* weights, double* weightsb, int len0) {
+        double w = 1.0/len0;
         for(size_t i=0; i<NW; i++) weightsb[i] = 0;
-        for(size_t i=0; i<len; i++) NeuralNetworkLoss_b(&images[N*i], weights, weightsb, &label_dists[O*i], w);
+        for(size_t i=0; i<len0; i++) {
+            size_t k = idx[i];
+            NeuralNetworkLoss_b(&images[N*k], weights, weightsb, &label_dists[O*k], w);
+        }
     }
 };
 
 image_set train;
 image_set test;
+std::random_device rd;
+std::mt19937 rnd(rd());
 
 int main() {
     srand(10);
@@ -110,16 +122,21 @@ int main() {
     opt_res = nlopt_set_min_objective(
         opt,
         [](unsigned n, const double* x, double* grad, void* f_data) -> double {
+            std::shuffle(train.idx.begin(), train.idx.end(), rnd);
+            size_t len = 10000;
             printf("train: ");
-            double loss = train.avg_loss(x);
+            double loss = train.avg_loss(x,len);
             printf("test:  ");
-            test.avg_loss(x);
-            train.avg_loss_grad(x,grad);
+            test.avg_loss(x,test.len);
+ 
+ 
+ 
+            train.avg_loss_grad(x,grad, len);
             return loss;
         },
         NULL
     );
-    opt_res = nlopt_set_maxeval(opt, 200);
+    opt_res = nlopt_set_maxeval(opt, 2000);
     double obj;
     opt_res = nlopt_optimize(opt, weights.data(), &obj);
     printf("obj: %lg", obj);
