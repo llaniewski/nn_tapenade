@@ -49,13 +49,17 @@ double NeuralNetworkLoss(double image[N], double weights[NW], double layer3[O], 
         widx++;
         layer3m[i] = sum;
     }
+    double sum = 0;
     for (int i=0;i<O;i++) {
-        layer3[i] = sigmoid(layer3m[i]);
+        sum += exp(layer3m[i]);
+    }
+    for (int i=0;i<O;i++) {
+        layer3[i] = exp(layer3m[i])/sum;
     }
     double loss = 0;
     for (int i=0;i<O;i++) {
-        loss += (layer3[i]-label[i])*(layer3[i]-label[i]);
-        // loss += -label[i]*log(layer3[i]);
+        //loss += (layer3[i]-label[i])*(layer3[i]-label[i]);
+        loss += -label[i]*log(layer3[i]);
     }
     return loss;
 }
