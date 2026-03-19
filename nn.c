@@ -6,7 +6,7 @@ double sigmoid(double x) {
     return 1/(1+exp(-x));
 }
 
-void NeuralNetwork(double image[N], double weights[NW], double layer3[O]) {
+double NeuralNetworkLoss(double image[N], double weights[NW], double layer3[O], double label[O]) {
     int widx = 0;
     double layer1m[M];
     for (int i=0;i<M;i++) {
@@ -52,11 +52,6 @@ void NeuralNetwork(double image[N], double weights[NW], double layer3[O]) {
     for (int i=0;i<O;i++) {
         layer3[i] = sigmoid(layer3m[i]);
     }
-}
-
-double NeuralNetworkLoss(double image[N], double weights[NW], double label[O]) {
-    double layer3[O];
-    NeuralNetwork(image, weights, layer3);
     double loss = 0;
     for (int i=0;i<O;i++) {
         loss += (layer3[i]-label[i])*(layer3[i]-label[i]);

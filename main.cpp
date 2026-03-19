@@ -10,10 +10,10 @@
 #include <random>
 
 extern "C" {
-    double NeuralNetwork(double image[N], const double weights[NW], double layer3[O]);
-    double NeuralNetworkLoss(double image[N], const double weights[NW], double label[O]);
-    void NeuralNetworkLoss_b(double image[N], const double weights[NW], double weightsb[NW],
-        double label[O], double NeuralNetworkb);
+    double NeuralNetworkLoss(double image[N], const double weights[NW], double layer3[O], double label[O]);
+    void NeuralNetworkLoss_b(double image[N], const double weights[NW], double 
+        weightsb[NW], double layer3[O], double layer3b[O], double label[
+        O], double NeuralNetworkLossb);
 }
 
 struct image_set {
@@ -71,20 +71,13 @@ struct image_set {
         for (size_t i=0; i<len0; i++) {
             double output[O];
             size_t k = idx[i];
-            NeuralNetwork(&images[N*k], weights, output);
+            loss += NeuralNetworkLoss(&images[N*k], weights, output, &label_dists[O*k]);
             int label = labels[k];
             int imax = 0;
-            double loss0 = 0;
             for (int j=0; j<O; j++) {
                 if (output[j] > output[imax]) imax = j;
-                double dist_val = label_dists[O*k + j];
-                dist_val = dist_val - output[j];
-                loss0 += dist_val*dist_val;
-                // loss0 += -dist_val[i]*log(output[i]);
             }
             if (imax == label) hit++;
-            loss += loss0;
-            // loss += NeuralNetworkLoss(&images[N*i], weights, &label_dists[O*i]);
         }
         loss = loss / len0;
         hit = hit / len0;
@@ -93,10 +86,14 @@ struct image_set {
     }
     void avg_loss_grad(const double* weights, double* weightsb, int len0) {
         double w = 1.0/len0;
+        double output[O];
+        double outputb[O];
+        for(size_t i=0; i<O; i++) outputb[i] = 0;
         for(size_t i=0; i<NW; i++) weightsb[i] = 0;
         for(size_t i=0; i<len0; i++) {
+            double output[O];
             size_t k = idx[i];
-            NeuralNetworkLoss_b(&images[N*k], weights, weightsb, &label_dists[O*k], w);
+            NeuralNetworkLoss_b(&images[N*k], weights, weightsb, output, outputb, &label_dists[O*k], w);
         }
     }
 };
